@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: rag-spring-ai
+  threads:
+    virtual:
+      enabled: true
+  ai:
+    vectorstore:
+      chroma:
+        url: ${CHROMA_URL:http://localhost:8000}
+        collection-name: ${CHROMA_COLLECTION:rag-documents}
+    transformers:
+      embedding:
+        model-name: sentence-transformers/all-MiniLM-L6-v2
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+logging:
+  level:
+    root: INFO
+    com.beebay.rag: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.ai.vectorstore: DEBUG
+    ai.djl: INFO
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,loggers
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000}

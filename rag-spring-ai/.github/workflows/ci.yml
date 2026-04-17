@@ -1,0 +1,52 @@
+# Simple CI workflow - PR checks
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test
+        run: ./mvnw -B clean verify
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: target/surefire-reports/
+
+  trivy_scan:
+    needs: build
+    if: ${{ vars.ENABLE_CONTAINER_SCAN == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan Container (Build & Scan)
+        uses: DSI-MARJANEGROUP/action-trivy-scanner@v1.0.6
+        with:
+          image_name: 'app:latest'
+          build_context: '.'
+          dockerfile: 'Dockerfile'
+          severity: 'HIGH,CRITICAL'
+          ignore_unfixed: 'true'
+          upload_sarif: 'true'
+          sarif_upload_on_pr: 'false'
+          exit_on_findings: 'true'
+          github_pat: ${{ secrets.DEPENDABOT_ALERTS_TOKEN_PAT }}

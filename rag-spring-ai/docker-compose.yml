@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # ChromaDB - Vector Store
+  chromadb:
+    image: chromadb/chroma:0.4.24
+    container_name: chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Spring AI RAG Backend
+  rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-api
+    ports:
+      - "8080:8080"
+    environment:
+      - CHROMA_URL=http://chromadb:8000
+      - CHROMA_COLLECTION=rag-documents
+      - CORS_ORIGINS=http://localhost:3000,http://rag-ui:3000
+      - JAVA_OPTS=-Xms2g -Xmx6g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:ActiveProcessorCount=2
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  # Next.js UI
+  rag-ui:
+    build:
+      context: ../rag-next-ui
+      dockerfile: Dockerfile
+    container_name: rag-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - RAG_API_URL=http://rag-api:8080
+    depends_on:
+      - rag-api
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    depends_on:
+      - rag-api
+
+  # Grafana - Metrics Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  chroma_data:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,153 @@
+Spring AI Framework - Overview
+Generated: 2026-04-16
+
+What is Spring AI?
+Spring AI is an application framework for AI engineering in the Spring ecosystem.
+It is designed to help Java developers build AI-enabled applications using familiar
+Spring concepts, abstractions, and Boot-based configuration.
+
+Main goal
+Spring AI applies Spring design principles such as portability, modularity, and
+POJO-based development to AI application development. It aims to reduce the amount
+of low-level provider-specific code developers need to write.
+
+Why it exists
+When building AI applications directly against model-provider SDKs, developers often
+face:
+- provider-specific APIs
+- repeated integration code
+- prompt and model wiring complexity
+- vector store and retrieval integration overhead
+- limited portability between vendors
+
+Spring AI addresses this by introducing common abstractions over AI capabilities.
+
+Core ideas
+1. Spring-friendly abstractions
+   Spring AI provides unified APIs for common AI tasks so you can switch providers
+   with less application rewrite.
+
+2. Boot integration
+   It works naturally with Spring Boot, including auto-configuration and starter-based
+   dependency management.
+
+3. Provider portability
+   It supports multiple model and infrastructure providers behind common interfaces.
+
+4. Production-oriented features
+   It includes support for observability, vector stores, advisors, prompt handling,
+   and retrieval workflows.
+
+Main capabilities
+- Chat model integration
+- Embedding model integration
+- Image model integration
+- Vector store integration
+- Prompt and template support
+- Retrieval-augmented generation style workflows
+- Advisor/interceptor style request processing
+- Tool and agent-related ecosystem extensions
+- Metrics and tracing / observability support
+
+Important concepts
+- ChatClient:
+  A client-style abstraction used to interact with chat models in a convenient,
+  fluent way.
+
+- ChatModel:
+  The lower-level model abstraction behind chat generation.
+
+- EmbeddingModel:
+  Used to generate embeddings from text for semantic search and retrieval use cases.
+
+- ImageModel:
+  Used when working with image generation or related multimodal scenarios.
+
+- VectorStore:
+  Abstraction for storing and searching embeddings across supported backends.
+
+- Advisors:
+  Components that can influence model calls, often used for cross-cutting concerns
+  such as memory, retrieval, logging, or augmentation.
+
+- Observability:
+  Spring AI supports metrics and tracing for components such as ChatClient,
+  ChatModel, EmbeddingModel, ImageModel, and VectorStore.
+
+Typical use cases
+- AI chat assistants inside Spring Boot apps
+- Internal knowledge assistants using vector search
+- Document Q&A systems
+- AI-enhanced enterprise applications
+- Summarization, extraction, and classification pipelines
+- Agentic workflows and tool-calling integrations
+
+Compatibility notes
+According to the official project materials:
+- Spring AI 1.1.x is aligned with Spring Boot 3.5.x
+- Spring AI 2.x.x (main branch) is aligned with Spring Boot 4.x
+
+Getting started direction
+A common starting path is:
+1. Go to Spring Initializr
+2. Select the needed AI model and vector store dependencies
+3. Create a Spring Boot application
+4. Configure provider credentials in application properties
+5. Inject and use ChatClient or the required model abstraction in services
+
+Tiny conceptual example
+@Service
+public class AiService {
+
+    private final ChatClient chatClient;
+
+    public AiService(ChatClient.Builder builder) {
+        this.chatClient = builder.build();
+    }
+
+    public String ask(String question) {
+        return chatClient.prompt()
+                .user(question)
+                .call()
+                .content();
+    }
+}
+
+Why Spring developers may like it
+- consistent with existing Spring development style
+- easier integration into existing Java enterprise systems
+- cleaner abstraction over multiple AI vendors
+- simpler path to production concerns like tracing and metrics
+- good fit for Boot-based microservices and internal platforms
+
+Things to keep in mind
+- abstraction helps portability, but provider capabilities still differ
+- AI app quality still depends on prompt design, data quality, retrieval design,
+  safety controls, and evaluation
+- version compatibility with Spring Boot matters and should be checked before setup
+
+Official sources used
+1. Spring AI Reference Documentation
+   https://docs.spring.io/spring-ai/reference/index.html
+
+2. Spring AI Concepts
+   https://docs.spring.io/spring-ai/reference/concepts.html
+
+3. Spring AI Getting Started
+   https://docs.spring.io/spring-ai/reference/getting-started.html
+
+4. Spring AI Project Page
+   https://spring.io/projects/spring-ai
+
+5. Spring AI GitHub Repository
+   https://github.com/spring-projects/spring-ai
+
+6. Spring AI Observability
+   https://docs.spring.io/spring-ai/reference/observability/index.html
+
+Summary
+Spring AI is the Spring ecosystem's framework for building AI-enabled Java
+applications with common abstractions for models, embeddings, vector stores,
+observability, and provider integrations. It is best understood as the AI layer
+that brings Spring-style development practices into LLM and GenAI application
+engineering.
