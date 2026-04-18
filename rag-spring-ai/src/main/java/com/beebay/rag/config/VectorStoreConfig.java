@@ -42,7 +42,9 @@ public class VectorStoreConfig {
     }
 
     @Bean
-    public ApplicationRunner embeddingWarmupRunner(EmbeddingModel embeddingModel) {
+    public ApplicationRunner embeddingWarmupRunner(
+            EmbeddingModel embeddingModel,
+            WarmupReadinessIndicator readinessIndicator) {
         return args -> {
             log.info("=== WARMUP START === Loading embedding model...");
             long start = System.currentTimeMillis();
@@ -50,8 +52,10 @@ public class VectorStoreConfig {
                 var result = embeddingModel.embed("warmup test");
                 log.info("=== WARMUP COMPLETE === Model loaded in {}ms, embedding dimensions: {}",
                     System.currentTimeMillis() - start, result.size());
+                readinessIndicator.markReady();
             } catch (Exception e) {
                 log.error("=== WARMUP FAILED === Error loading embedding model: {}", e.getMessage(), e);
+                readinessIndicator.markFailed(e.getMessage());
             }
         };
     }

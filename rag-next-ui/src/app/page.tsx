@@ -69,20 +69,42 @@ export default function Home() {
     if (!question.trim()) return;
 
     setLoading(true);
-    appendClientLog(`Sending query: "${question.trim().slice(0, 80)}"`);
+    const startTime = performance.now();
+    const traceId = crypto.randomUUID().slice(0, 8);
+
+    appendClientLog(`[${traceId}] QUERY START: "${question.trim().slice(0, 50)}..."`);
+    console.log(`[TRACE ${traceId}] Query request:`, { question, endpoint: `${API_URL}/api/rag/query` });
+
     try {
       const res = await fetch(`${API_URL}/api/rag/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
       });
+
+      const elapsed = (performance.now() - startTime).toFixed(0);
       const data = await res.json();
-      setAnswer(data.answer);
-      appendClientLog("Query completed successfully");
+
+      console.log(`[TRACE ${traceId}] Query response:`, {
+        status: res.status,
+        elapsed: `${elapsed}ms`,
+        answerLength: data.answer?.length || 0
+      });
+
+      if (res.ok) {
+        setAnswer(data.answer);
+        appendClientLog(`[${traceId}] QUERY OK: ${elapsed}ms, ${data.answer?.length || 0} chars`);
+      } else {
+        setAnswer(`Error: ${data.error || data.message || 'Unknown error'}`);
+        appendClientLog(`[${traceId}] QUERY ERROR: HTTP ${res.status} in ${elapsed}ms`);
+      }
     } catch (err) {
+      const elapsed = (performance.now() - startTime).toFixed(0);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+
+      console.error(`[TRACE ${traceId}] Query failed:`, { elapsed: `${elapsed}ms`, error: errorMsg });
       setAnswer("Error connecting to RAG service");
-      console.error("Query request failed", err);
-      appendClientLog("Query failed");
+      appendClientLog(`[${traceId}] QUERY FAILED: ${errorMsg} (${elapsed}ms)`);
     } finally {
       setLoading(false);
     }
@@ -111,13 +133,23 @@ export default function Home() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
       setUploadStatus("Please select a file");
-      appendClientLog("Upload blocked because no file is selected");
+      appendClientLog("Upload blocked: no file selected");
       return;
     }
 
     setUploading(true);
     setUploadStatus("Uploading and processing...");
-    appendClientLog(`Uploading ${file.name} to ${API_URL}/api/rag/upload`);
+
+    const startTime = performance.now();
+    const traceId = crypto.randomUUID().slice(0, 8);
+
+    appendClientLog(`[${traceId}] UPLOAD START: ${file.name} (${formatFileSize(file.size)})`);
+    console.log(`[TRACE ${traceId}] Upload request:`, {
+      filename: file.name,
+      size: file.size,
+      type: file.type,
+      endpoint: `${API_URL}/api/rag/upload`
+    });
 
     try {
       const formData = new FormData();
@@ -127,22 +159,35 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
+
+      const elapsed = (performance.now() - startTime).toFixed(0);
       const data = await res.json();
 
-      if (data.status === "success") {
+      console.log(`[TRACE ${traceId}] Upload response:`, {
+        status: res.status,
+        elapsed: `${elapsed}ms`,
+        chunks: data.chunks,
+        response: data
+      });
+
+      if (res.ok && data.status === "success") {
         setUploadStatus(`Ingested "${data.filename}" into ${data.chunks} chunks`);
-        appendClientLog(`Upload completed successfully with ${data.chunks} chunks`);
+        appendClientLog(`[${traceId}] UPLOAD OK: ${data.chunks} chunks in ${elapsed}ms`);
         setSelectedFile("");
         setSelectedFileDetails(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
       } else {
-        setUploadStatus(`Error: ${data.message || "Upload failed"}`);
-        appendClientLog(`Upload failed: ${data.message || "unknown error"}`);
+        const errorMsg = data.message || data.error || `HTTP ${res.status}`;
+        setUploadStatus(`Error: ${errorMsg}`);
+        appendClientLog(`[${traceId}] UPLOAD ERROR: ${errorMsg} (${elapsed}ms)`);
       }
     } catch (err) {
+      const elapsed = (performance.now() - startTime).toFixed(0);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+
+      console.error(`[TRACE ${traceId}] Upload failed:`, { elapsed: `${elapsed}ms`, error: errorMsg });
       setUploadStatus("Error connecting to RAG service");
-      console.error("Upload request failed", err);
-      appendClientLog("Upload request failed");
+      appendClientLog(`[${traceId}] UPLOAD FAILED: ${errorMsg} (${elapsed}ms)`);
     } finally {
       setUploading(false);
     }
